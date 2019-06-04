@@ -3,12 +3,15 @@ import time
 # from django.views.decorators.csrf import csrf_exempt
 url = '127.0.0.1/api/'
 urlapi = 'regsiterUser'
-data = {
+RegisterUserData = {
     'UserID': 1,
     'PersonName': 'Ventura',
-    'login_name': 'Ventura',
+    'LoginName': 'Ventura',
     'Password': '123456',
     'UserType': 'A',
+}
+data = {
+    'what':1
 }
 # @csrf_exempt
 def post():
