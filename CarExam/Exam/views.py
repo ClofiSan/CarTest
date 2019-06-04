@@ -1,9 +1,13 @@
 from .models import *
 from django.http import HttpResponse
-from django.http import JsonResponse
+
 from django.db.models import Count
 from django.views.decorators.csrf import csrf_exempt
 import json
+def JsonResponse(data):
+    return HttpResponse({
+        json.dumps(data,ensure_ascii=False)
+    },content_type="application/json,charset=utf-8")
 
 from django.shortcuts import render
 postForResiterStudent = {
@@ -28,57 +32,75 @@ postForStudentLogin = {
     'UserID':''
 }
 # 注册考生发送的数据格式
-
+content_type ='application/json'
+charset = 'utf-8'
 # @csrf_exempt
 def RegsiterUserAPI(request):
     if request.method == 'POST':
-        if Users.objects.get(login_name=request.POST.get('LoginName')) is not None:
-             return JsonResponse({
-                 'Status': 0,
-                 'msg':'error:LoginName already existed'
-             })
-        count = Users.objects.aggregate(Count('user_id'))
+        LoginName = request.POST.get('LoginName')
+        PersonName = request.POST.get('PersonName')
+        psw = request.POST.get('Password')
+        UserType = request.POST.get('UserType')
+        if (not LoginName) or (not PersonName) or (not psw) or (not UserType):
+            return JsonResponse({
+                'code':400,
+                'message':'请输入完整数据'
+            })
+        if Users.objects.filter(login_name=LoginName).count() != 0:
+            return JsonResponse({
+                'code':400,
+                'message':'用户名已经被使用了'
+            })
+        count = Users.objects.aggregate(Count('user_id'))['user_id__count']+1
         user = Users(
-            user_id = count+1,
-            user_name = request.POST.get('PersonName'),
-            login_name = request.POST.get('LoginName'),
-            password = request.POST.get('Password'),
-            user_type = request.POST.get('UserType'),
+            user_id= count,
+            user_name=PersonName,
+            login_name=LoginName,
+            password=psw,
+            user_type=UserType,
             sts='A',
         )
         user.save()
         return JsonResponse({
-            'Status':1,
-            'msg':'Regsiter successful',
-            'PersonName':user.user_name,
-            'LoginName':user.login_name,
+            'code': 200,
+            'message': '注册成功！',
         })
     else:
         return JsonResponse({
-            'Status':0,
-            'msg':'error:method error'
+            'code':400,
+            'message':'请使用post方法'
         })
     # if request.method == 'GET':
     #     return JsonResponse(postForResiterUser)
 # 如何序列化
 def UserLoginAPI(request):
     if request.method == 'POST':
+        LoginName = request.POST.get('LoginName')
         psw = request.POST.get('Password')
-        if Users.objects.get(login_name=request.POST.get('LoginName')) is None:
+        # 校验是否正确
+        if (not LoginName) or (not psw):
             return JsonResponse({
-                'Status': 0,
-                'msg': 'error:no LoginName'
+                'code': 400,
+                'message':'请输入完整数据'
             })
-        if Users.objects.get(login_name=request.POST.get('LoginName')).password != psw:
+        # 是否存在这个用户
+        if Users.objects.filter(login_name=LoginName).count() == 0:
             return JsonResponse({
-                'Status':0,
-                'msg': 'error:psw error'
+                'code': 400,
+                'message': '用户不存在'
             })
-        user = Users.objects.get(login_name=request.POST.get('LoginName'))
+        # 校验密码
+        user = Users.objects.get(login_name=LoginName)
+        if user.password != psw:
+            return JsonResponse({
+                'code':400,
+                'message': '密码错误'
+            })
+        # user = Users.objects.get(login_name=request.POST.get('LoginName'))
         return JsonResponse({
             # 本地校验userType是否为S，如果不为S直接进入注册
-            'Status': 1,
-            'msg': 'Login successful',
+            'code': 200,
+            'message': '登录成功！',
             'UserID':user.user_id,
             'PersonName': user.user_name,
             'LoginName': user.login_name,
@@ -86,76 +108,107 @@ def UserLoginAPI(request):
         })
     else:
         return JsonResponse({
-            'Status': 0,
-            'msg': 'error:method error'
+            'code': 400,
+            'message': '请使用post方法'
         })
 
 def RegsiterStudentAPI(request):
     # 注册一个新的Student
     # 因为只有是Users才能成为Student所以不用验证
     if request.method == 'POST':
-        # 判断是否已经注册
-        if Student.objects.get(id=request.POST.get('UserID')) is not None:
-            return JsonResponse({
-                 'Status': 0,
-                 'msg':'error:UserID was already student'
-             })
 
+        UserID = request.POST.get('UserID')
+        PersonName = request.POST.get('PersonName')
+        Pin = request.POST.get('Pin')
+        Phone = request.POST.get('Phone')
+        # 判断输入数据是否存在
+        if (not PersonName) or (not Pin) or (not Phone):
+            return JsonResponse({
+                'code': 400,
+                'message': '请输入完整数据'
+            })
+        # 判断是否已经注册为Student
+        if Student.objects.filter(id=UserID).count() != 0:
+            return JsonResponse({
+                'code': 400,
+                'message': '已经是考生了'
+            })
         student = Student(
-            id=request.data['UserID'],
-            name=request.data['PersonName'],
-            pin=request.data['Pin'],
-            phone=request.data['Phone']
+            id=UserID,
+            name=PersonName,
+            pin=Pin,
+            phone=Phone
         )
         student.save()
-        Users.objects.get(user_id=request.data['UserID']).update(user_type='S')
         return JsonResponse({
-                'Status':1,
-                'msg':'Regsite Student successful',
-                'PersonName':student.name,
+                'code':200,
+                'message':'注册成功'
             })
     else:
         return JsonResponse({
-            'Status': 0,
-            'msg': 'error:method error'
+            'code': 400,
+            'message': '请用POST方法'
         })
 
 def StudentLoginAPI(request):
-#    根据UserID获得Student信息，UserType 为S
     if request.method == 'POST':
-        if request.POST.get('UserType') != 'S':
+        UserID = request.POST.get('UserID')
+        # 校验是否正确
+        if (not UserID):
             return JsonResponse({
-                'Status':0,
-                'msg':'you are not student',
+                'code': 400,
+                'message': '请输入完整数据'
             })
-        student = Student.objects.get(id=request.POST.get('UserID'))
+        # 是否存在这个用户
+        if Student.objects.filter(id=UserID).count() == 0:
+            return JsonResponse({
+                'code': 400,
+                'message': '用户不存在'
+            })
+        # 其实考生登录成功之后要返回考试信息的
+        ExamineList = GetStudentExam(UserID)
         return JsonResponse({
-            'Status': 1,
-            'msg':'Student Login successful'
+            # 本地校验userType是否为S，如果不为S直接进入注册
+            'code': 200,
+            'message': '考生登录成功！',
+            'Examines':ExamineList#考试信息列表
         })
     else:
         return JsonResponse({
-            'Status': 0,
-            'msg': 'error:method error'
+            'code': 400,
+            'message': '请使用post方法'
         })
 
+def RegsiterExamAPI(request):
+    # 为学生注册考试
+    return JsonResponse()
+
+
+def GetStudentExam(StudentID):
+    # 获得考生的考试信息
+    ExamineList = []
+    return ExamineList
 
 
 def JustForTest(request):
     if request.method == 'POST':
-        user = Users.objects.get(user_id=request.POST.get('LoginName'))
-        print(user.user_name)
+        LoginName = request.POST.get('LoginName')
+        if not LoginName:
+            return JsonResponse({
+                'msg':'error what'
+            })
         return JsonResponse({
-            'UserID': user.user_id,
-            'PersonName': user.user_name,
-            'LoginName': user.login_name,
-            'Password': user.password,
-            'UserType': user.user_type,
+            'msg':LoginName
         })
     if request.method == 'GET':
-        count = Users.objects.aggregate(Count('user_id'))
+        try:
+            user = Users.objects.get(user_id=2)
+        except Users.DoesNotExist:
+            return JsonResponse({
+                'msg': 'null'
+            })
         return JsonResponse({
-            'count':count
+            'msg':user.login_name
         })
 # def LoginUserAPI(request):
 #     # 用户登录
