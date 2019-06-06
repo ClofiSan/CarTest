@@ -6,7 +6,15 @@ urlpatterns = [
     path('regsiterUser/', RegsiterUserAPI),
     path('userLogin/',UserLoginAPI),
     path('regsiterStudent/',RegsiterStudentAPI),
-    path('StudentLogin/',StudentLoginAPI),
+    path('studentLogin/',StudentLoginAPI),
+
+    path('regsiterExam/',RegsiterExamAPI),
+    path('examLogin/',ExamLoginAPI),
+
+
+
     path('test/',JustForTest)
+
+
 
 ]

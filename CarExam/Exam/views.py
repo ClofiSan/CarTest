@@ -1,9 +1,12 @@
 from .models import *
 from django.http import HttpResponse
-
 from django.db.models import Count
+from django.db import connection, transaction
 from django.views.decorators.csrf import csrf_exempt
+from django.core.serializers import serialize
+
 import json
+
 def JsonResponse(data):
     return HttpResponse({
         json.dumps(data,ensure_ascii=False)
@@ -179,18 +182,96 @@ def StudentLoginAPI(request):
             'message': '请使用post方法'
         })
 
+def GetStudentExam(UserID):
+    #返回考生的考试信息
+    return
+
+
+
 def RegsiterExamAPI(request):
-    # 为学生注册考试
-    return JsonResponse()
+    # @为学生注册考试
+    # 创建考卷，记录进数据库
+    if request.method == 'POST':
+        studentID = request.POST.get('UserID')
+        if not studentID:
+            return JsonResponse({
+                'code':400,
+                'message':'请输入完整数据'
+            })
+        if Student.objects.filter(id=studentID).count() == 0:
+            return JsonResponse({
+                'code':400,
+                'message':'考生不存在'
+            })
+        examID = Examine.objects.aggregate(Count('id'))['id__count'] + 1
+        CreateNewExam(examID,studentID)
+        examine = Examine.objects.get(id=examID)
+        return JsonResponse({
+            'code':200,
+            'message':'注册新考试成功',
+            'ExamID':examine.id,
+            'EmIn':examine.em_in,
+            'EmPwd':examine.em_pwd,
+        })
+    else:
+        return JsonResponse({
+            'code': 400,
+            'message': '请使用post方法'
+        })
 
+def ExamLoginAPI(requets):
+    #输入准考证号以登陆
+    if requets.method == 'POST':
+        EmIn = requets.POST.get('EmIn')
+        EmPwd = requets.POST.get('EmPwd')
+        if (not EmIn) or (not EmPwd):
+            return JsonResponse({
+                'code': 400,
+                'message': '请输入完整数据'
+            })
+        if Examine.objects.filter(em_in=EmIn).count() == 0:
+            return JsonResponse({
+                'code': 400,
+                'message': '准考证号错误'
+            })
+        examine = Examine.objects.get(em_in=EmIn)
+        if examine.em_pwd != EmPwd:
+            return JsonResponse({
+                'code': 400,
+                'message': '准考密码错误'
+            })
+        paper = Paper.objects.get(paper_id=examine.paper_id)
+        QuestionList = []
+        for questionID in paper.question_id_seq.split('-'):
+            if not questionID:
+                break
+            question = Question.objects.get(question_id=questionID)
+            QuestionList.append({
+                'QuestionBody':question.question_body,
+                'QuestionForm':question.question_form,
+                'BranchA':question.branch_a,
+                'BranchB':question.branch_b,
+                'BranchC':question.branch_c,
+                'PicName':question.pic_name,
+                'QuestionTypeID':question.question_type_id,
+                'QuestionMark':question.question_mark
+            })
+            print(question.question_body)
+        # questionID的序列的存储格式什么
+        return JsonResponse({
+            'code':200,
+            'message':'进入考试',
+            'QuestionList':QuestionList
+        })
 
-def GetStudentExam(StudentID):
-    # 获得考生的考试信息
-    ExamineList = []
-    return ExamineList
+def CreateNewExam(examID,studentID):
+    cursor = connection.cursor()
+    cursor.callproc('PROC_GET_EXAM',[examID,studentID])
+    cursor.close()
 
 
 def JustForTest(request):
+    # 测试函数
     if request.method == 'POST':
         LoginName = request.POST.get('LoginName')
         if not LoginName:
@@ -201,15 +282,14 @@ def JustForTest(request):
             'msg':LoginName
         })
     if request.method == 'GET':
-        try:
-            user = Users.objects.get(user_id=2)
-        except Users.DoesNotExist:
-            return JsonResponse({
-                'msg': 'null'
-            })
-        return JsonResponse({
-            'msg':user.login_name
+        examList = Examine.objects.filter(student=1)
+        examListJsonData = serialize('json',examList)
+        examListJsonData = json.loads(examListJsonData)
+        return  JsonResponse({
+            'code':200,
+            'message':examListJsonData
         })
+
 # def LoginUserAPI(request):
 #     # 用户登录
 #     user = UserLogin()

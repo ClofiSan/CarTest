@@ -16,7 +16,19 @@ class StudentSerializers (serializers.ModelSerializer):
 
 
     class Meta:
-        models = Question
+        models = Student
         fields = '__all__'
+
+class HistoryExamSerializers(serializers.ModelSerializer):
+
+    class Meta:
+        models = Examine
+        fields = (
+            'em_in',
+            'student',
+            'score',
+            'em_date',
+            'status'
+        )
 
 

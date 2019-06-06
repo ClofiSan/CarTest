@@ -31,12 +31,31 @@ backdata = {
     'EmDate': '',  # 考试时间
     'Status': ''  # 考试状态
 }
+RegsiterExamAPIData = {
+    'UserID': 1
+}
+examLogindata1 = {
+    'EmIn':'4W87ITG58U2F5PFS',
+    'EmPwd':'FGFQGM0Q9U7TM99A'
+}
+examLogindata12={
+    'EmIn':'4W87ITG58U2F5PFS',
+    'EmPwd':''
+}
+# "4W87ITG58U2F5PFS", "EmPwd": "FGFQGM0Q9U7TM99A"
 # @csrf_exempt
 def post():
     r = requests.post(
-        url='http://127.0.0.1:8000/api/StudentLogin/',
-        data=StudentLoginData)
+        url='http://127.0.0.1:8000/api/examLogin/',
+        data=examLogindata1)
     print(r)
     print(r.text)
 if __name__ == '__main__':
     post()
+    # List = []
+    # for i in range(100):
+    #     List.append({
+    #         'key':'name',
+    #         'message':i
+    #     })
+    # print(List)
