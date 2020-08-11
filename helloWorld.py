@@ -42,12 +42,16 @@ examLogindata12={
     'EmIn':'4W87ITG58U2F5PFS',
     'EmPwd':''
 }
+getScoreData = {
+    'ExamID':2,
+    'Answer':'AACACBBAAABAABCAABBC'
+}
 # "4W87ITG58U2F5PFS", "EmPwd": "FGFQGM0Q9U7TM99A"
 # @csrf_exempt
 def post():
     r = requests.post(
-        url='http://127.0.0.1:8000/api/examLogin/',
-        data=examLogindata1)
+        url='http://127.0.0.1:8000/api/JudgeMark/',
+        data=getScoreData)
     print(r)
     print(r.text)
 if __name__ == '__main__':

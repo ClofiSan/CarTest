@@ -11,10 +11,12 @@ urlpatterns = [
     path('regsiterExam/',RegsiterExamAPI),
     path('examLogin/',ExamLoginAPI),
 
+    path('JudgeMark/',JudgeMarkAPI),
 
+    path('test/',JustForTest),
 
-    path('test/',JustForTest)
-
+    path('login/',getUserLoginPage),
+    path('new',UserSuc)
 
 
 ]
